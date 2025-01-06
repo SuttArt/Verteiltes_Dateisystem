@@ -54,10 +54,10 @@ impl Chunk for ChunkServer {
 		match chunk {
 			// Write data
 			Some(chunk) => {
-				let old_data  = inner.insert(url, chunk);
+				let old_data  = inner.insert(url.clone(), chunk);
 
 				// Notify the Master Server of the new/rewritten chunk
-				self.0.master_ref.insert(ctx, self.0.id, url).await.unwrap();
+				self.0.master_ref.insert(ctx, self.0.id, url.clone()).await.unwrap();
 
 				old_data
 			},
