@@ -17,16 +17,27 @@ use gfs_lite::master::GfsMaster;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// create the GFS master server
 	let server = GfsMaster::default();
-	
+
+	// Clone it for each service, to fix problem with "move"
+	let master_server = server.clone();
+	let chunk_master_server = server.clone();
+
 	// simultaneously listen to the chunk servers and the client applications
-	let listener = listen((Ipv6Addr::LOCALHOST, 0), Json::default).await;
+
+	// Listener for Master service (Client-side communication)
+	let client_listener = listen((Ipv6Addr::LOCALHOST, 50000), Json::default).await?;
+	println!("Master service listening on {}", client_listener.local_addr());
+
+	// Listener for ChunkMaster service (Chunk-server-side communication)
+	let chunk_listener = listen((Ipv6Addr::LOCALHOST, 50001), Json::default).await?;
+	println!("ChunkMaster service listening on {}", chunk_listener.local_addr());
 
 	// spawn the listener for client-side communication with the GFS master
 	tokio::spawn(
-		listener
+		client_listener
 			.filter_map(|r| ready(r.ok()))
 			.map(move |transport| BaseChannel::with_defaults(transport)
-				.execute(Master::serve(server.clone()))
+				.execute(Master::serve(master_server.clone()))
 				.for_each(|future| async move { tokio::spawn(future); }))
 			.buffer_unordered(10)
 			.for_each(|_| ready(()))
@@ -34,10 +45,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	// spawn the listener for chunk-server-side communication with the GFS master.
 	tokio::spawn(
-		listener
+		chunk_listener
 			.filter_map(|r| ready(r.ok()))
 			.map(move |transport| BaseChannel::with_defaults(transport)
-				.execute(ChunkMaster::serve(server.clone()))
+				.execute(ChunkMaster::serve(chunk_master_server.clone()))
 				.for_each(|future| async move { tokio::spawn(future); }))
 			.buffer_unordered(10)
 			.for_each(|_| ready(()))

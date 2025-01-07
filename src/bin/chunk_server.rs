@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	listener
 		.filter_map(|r| async  { r.ok() })
 		.map(|transport| BaseChannel::with_defaults(transport)
-			.execute(chunk_server.serve())
+			.execute(chunk_server.clone().serve())
 			.for_each(|future| async move { tokio::spawn(future); }))
 		.buffer_unordered(10)
 		.for_each(|_| async {})
