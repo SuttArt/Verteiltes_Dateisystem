@@ -50,11 +50,17 @@ impl Chunk for ChunkServer {
 	}
 	async fn set(self, ctx: Context, url: String, chunk: Option<String>) -> Option<String> {
 		// take write lock
-		let mut inner = self.0.storage.write().unwrap();
 		match chunk {
 			// Write data
 			Some(chunk) => {
-				let old_data  = inner.insert(url.clone(), chunk);
+				// Problem: cannot hold lock across await, need to release lock before!!!
+
+				// Take a write lock and insert the data
+				let old_data = {
+					let mut inner = self.0.storage.write().unwrap();
+					inner.insert(url.clone(), chunk)
+				};
+				// Lock is released here
 
 				// Notify the Master Server of the new/rewritten chunk
 				self.0.master_ref.insert(ctx, self.0.id, url.clone()).await.unwrap();
@@ -63,7 +69,12 @@ impl Chunk for ChunkServer {
 			},
 			// Delete data
 			None => {
-				let old_data = inner.remove(&url);
+				// Take a write lock and insert the data
+				let old_data = {
+					let mut inner = self.0.storage.write().unwrap();
+					inner.remove(&url)
+				};
+
 
 				// Notify the Master Server of the removal
 				self.0.master_ref.remove(ctx, url).await.unwrap();
