@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			.unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST));
 	
 	// connect to the master server
-	let tcp_connect = connect((master_addr, 50000), Json::default).await?;
+	let tcp_connect = connect((master_addr, 60000), Json::default).await?;
 
 	// open a channel for client commands
 	let master = ChunkMasterClient::new(Default::default(), tcp_connect).spawn();

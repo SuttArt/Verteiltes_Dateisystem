@@ -7,6 +7,7 @@ use futures::StreamExt;
 use tarpc::serde_transport::tcp::{listen};
 use tarpc::server::{BaseChannel, Channel};
 use tarpc::tokio_serde::formats::Json;
+use tokio::signal;
 use gfs_lite::{ChunkMaster, Master};
 use gfs_lite::master::GfsMaster;
 
@@ -29,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	println!("Master service listening on {}", client_listener.local_addr());
 
 	// Listener for ChunkMaster service (Chunk-server-side communication)
-	let chunk_listener = listen((Ipv6Addr::LOCALHOST, 50001), Json::default).await?;
+	let chunk_listener = listen((Ipv6Addr::LOCALHOST, 60000), Json::default).await?;
 	println!("ChunkMaster service listening on {}", chunk_listener.local_addr());
 
 	// spawn the listener for client-side communication with the GFS master
@@ -53,6 +54,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			.buffer_unordered(10)
 			.for_each(|_| ready(()))
 	);
+
+	// Wait for Ctrl+C to stop the server
+	signal::ctrl_c().await?;
+	println!("Shutting down server...");
 
 	Ok(())
 }
