@@ -39,10 +39,12 @@ impl Master for GfsMaster {
 		let inner = self.0.read().unwrap();
 		// find url
 		if let Some(&address) = inner.registry.get(&url) {
+			println!("Lookup for {}, it's address: {}", &url, &address);
 			address
 		} else {
 			// Choose random chunk server if nothing found
 			if let Some(&random_server) = inner.chunk_servers.choose(&mut rand::thread_rng()) {
+				println!("Lookup nothing found, choose random server address: {}", &random_server);
 				random_server
 			} else {
 				panic!("No chunk servers available for lookup!");
@@ -57,6 +59,7 @@ impl ChunkMaster for GfsMaster {
 		// take write lock
 		let mut inner = self.0.write().unwrap();
 		inner.chunk_servers.push(socket_addr);
+		println!("Registered chunk server: {}, with ID: {}", socket_addr, inner.chunk_servers.len() as u64 - 1);
 		// Index should be the last one
 		inner.chunk_servers.len() as u64 - 1
 	}
@@ -66,6 +69,7 @@ impl ChunkMaster for GfsMaster {
 		let mut inner = self.0.write().unwrap();
 		// find address in List
 		if let Some(&address) = inner.chunk_servers.get(sender as usize) {
+			println!("Inserted url: {}, with address: {}", url, address);
 			inner.registry.insert(url, address);
 		}
 	}
@@ -73,6 +77,7 @@ impl ChunkMaster for GfsMaster {
 	async fn remove(self, _: Context, url: String) {
 		// take write lock
 		let mut inner = self.0.write().unwrap();
+		println!("Removed url: {}", &url);
 		inner.registry.remove(&url);
 	}
 }
